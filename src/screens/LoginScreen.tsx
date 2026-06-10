@@ -42,7 +42,6 @@ export function LoginScreen({ auth }: LoginScreenProps) {
         >
           <View style={styles.hero}>
             <LogoEmpresa />
-            <Text style={styles.appName}>{appConfig.nome}</Text>
             <Text style={styles.heroTexto}>Controle de estoque e eventos da {appConfig.empresa}</Text>
           </View>
 
@@ -140,11 +139,6 @@ const styles = StyleSheet.create({
   },
   hero: {
     gap: spacing.md,
-  },
-  appName: {
-    color: colors.white,
-    fontSize: 40,
-    fontWeight: '900',
   },
   heroTexto: {
     color: '#D9E7F2',

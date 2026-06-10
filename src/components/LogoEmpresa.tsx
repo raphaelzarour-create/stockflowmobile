@@ -1,84 +1,43 @@
-import { StyleSheet, Text, View } from 'react-native';
-
-import { colors, radius, spacing } from '@/constants/tema';
+import { Image, StyleSheet, View } from 'react-native';
 
 interface LogoEmpresaProps {
   compacto?: boolean;
 }
 
+const logoHorizontal = require('../../assets/brand-logo-horizontal-light.png');
+const logoSimbolo = require('../../assets/brand-logo-symbol.png');
+
 export function LogoEmpresa({ compacto = false }: LogoEmpresaProps) {
   return (
     <View
       accessible
-      accessibilityLabel="Logo da 4K Leds"
+      accessibilityLabel="Logo do StockFlow"
       style={[styles.container, compacto && styles.containerCompacto]}
     >
-      <View style={[styles.marca, compacto && styles.marcaCompacta]}>
-        <Text style={[styles.numero, compacto && styles.numeroCompacto]}>4K</Text>
-        <View style={styles.led} />
-      </View>
-      {!compacto ? (
-        <View style={styles.textoBox}>
-          <Text style={styles.nome}>4K Leds</Text>
-          <Text style={styles.subtitulo}>Eventos</Text>
-        </View>
-      ) : null}
+      <Image
+        source={compacto ? logoSimbolo : logoHorizontal}
+        resizeMode="contain"
+        style={compacto ? styles.logoCompacto : styles.logo}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  containerCompacto: {
-    gap: 0,
-  },
-  marca: {
-    width: 56,
-    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: '#31536E',
-    backgroundColor: '#081F36',
   },
-  marcaCompacta: {
+  containerCompacto: {
     width: 42,
     height: 42,
   },
-  numero: {
-    color: colors.white,
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 0,
+  logo: {
+    width: 278,
+    height: 76,
   },
-  numeroCompacto: {
-    fontSize: 16,
-  },
-  led: {
-    position: 'absolute',
-    right: 8,
-    top: 8,
-    width: 9,
-    height: 9,
-    borderRadius: 9,
-    backgroundColor: colors.accent,
-  },
-  textoBox: {
-    gap: spacing.xs,
-  },
-  nome: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  subtitulo: {
-    color: '#C9D7E3',
-    fontSize: 13,
-    fontWeight: '700',
+  logoCompacto: {
+    width: 42,
+    height: 42,
   },
 });
