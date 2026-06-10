@@ -14,9 +14,10 @@ type Icone = ComponentProps<typeof Ionicons>['name'];
 
 interface DashboardScreenProps {
   controller: StockFlowController;
+  onCadastrarProduto: () => void;
 }
 
-export function DashboardScreen({ controller }: DashboardScreenProps) {
+export function DashboardScreen({ controller, onCadastrarProduto }: DashboardScreenProps) {
   const { resumo, dados } = controller;
 
   return (
@@ -24,14 +25,13 @@ export function DashboardScreen({ controller }: DashboardScreenProps) {
       <View style={styles.blocoHero}>
         <Text style={styles.heroTitulo}>Controle rapido do estoque</Text>
         <Text style={styles.heroTexto}>
-          Consulte disponibilidade, eventos e alertas antes de separar os equipamentos.
+          Cadastre produtos reais, consulte disponibilidade e planeje eventos antes da montagem.
         </Text>
         <Botao
-          titulo="Carregar dados de exemplo"
-          icone="sparkles-outline"
+          titulo="Cadastrar produto"
+          icone="add-circle-outline"
           variante="secundario"
-          onPress={controller.popularDadosExemplo}
-          desabilitado={controller.salvando || dados.itens.length > 0}
+          onPress={onCadastrarProduto}
         />
       </View>
 

@@ -6,7 +6,8 @@ Use este roteiro em um celular Android ou Expo Go antes da apresentação.
 
 - [ ] Abrir o app no celular.
 - [ ] Conferir se a tela inicial carrega sem erro.
-- [ ] Tocar em "Carregar dados de exemplo", se o estoque estiver vazio.
+- [ ] Fazer login com e-mail e senha de teste.
+- [ ] Cadastrar um produto real, se o estoque estiver vazio.
 - [ ] Confirmar se a barra inferior navega entre Início, Estoque, Eventos, Histórico e Info.
 
 ## Estoque

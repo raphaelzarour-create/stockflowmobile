@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LogoEmpresa } from '@/components/LogoEmpresa';
+import { appConfig } from '@/constants/app';
 import { colors, radius, spacing } from '@/constants/tema';
 import { useStockFlow } from '@/hooks/useStockFlow';
 import { abasPrincipais, type AbaId } from '@/navigation/abas';
@@ -12,35 +14,51 @@ import { DashboardScreen } from '@/screens/DashboardScreen';
 import { EstoqueScreen } from '@/screens/EstoqueScreen';
 import { EventosScreen } from '@/screens/EventosScreen';
 import { HistoricoScreen } from '@/screens/HistoricoScreen';
+import { LoginScreen } from '@/screens/LoginScreen';
 
 export default function Home() {
   const controller = useStockFlow();
   const [abaAtual, setAbaAtual] = useState<AbaId>('inicio');
+  const [usuario, setUsuario] = useState<{ nome: string; email: string } | null>(null);
+  const [abrirCadastroProdutoToken, setAbrirCadastroProdutoToken] = useState(0);
+
+  if (!usuario) {
+    return <LoginScreen onEntrar={setUsuario} />;
+  }
 
   const Conteudo = {
-    inicio: <DashboardScreen controller={controller} />,
-    estoque: <EstoqueScreen controller={controller} />,
+    inicio: (
+      <DashboardScreen
+        controller={controller}
+        onCadastrarProduto={() => {
+          setAbaAtual('estoque');
+          setAbrirCadastroProdutoToken((token) => token + 1);
+        }}
+      />
+    ),
+    estoque: <EstoqueScreen controller={controller} abrirCadastroToken={abrirCadastroProdutoToken} />,
     eventos: <EventosScreen controller={controller} />,
     historico: <HistoricoScreen controller={controller} />,
-    configuracoes: <ConfiguracoesScreen controller={controller} />,
+    configuracoes: (
+      <ConfiguracoesScreen
+        usuarioEmail={usuario.email}
+        onSair={() => {
+          setUsuario(null);
+          setAbaAtual('inicio');
+        }}
+      />
+    ),
   }[abaAtual];
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <View>
-          <Text style={styles.appName}>StockFlow</Text>
-          <Text style={styles.subtitle}>4K Leds e Eventos</Text>
+        <LogoEmpresa compacto />
+        <View style={styles.headerText}>
+          <Text style={styles.appName}>{appConfig.nome}</Text>
+          <Text style={styles.subtitle}>{appConfig.empresa}</Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Recarregar dados"
-          onPress={controller.recarregar}
-          style={styles.refreshButton}
-        >
-          <Ionicons name="refresh" size={20} color={colors.white} />
-        </Pressable>
       </View>
 
       {controller.erro ? (
@@ -101,7 +119,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  headerText: {
+    flex: 1,
   },
   appName: {
     color: colors.white,
@@ -113,15 +134,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginTop: spacing.xs,
-  },
-  refreshButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: '#31536E',
   },
   tabBar: {
     flexDirection: 'row',

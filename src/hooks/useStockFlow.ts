@@ -7,7 +7,6 @@ import {
   excluirEvento,
   excluirItem,
   finalizarEvento,
-  popularDadosExemplo,
   registrarMovimentacaoManual,
   salvarEvento,
   salvarItem,
@@ -99,7 +98,6 @@ export function useStockFlow() {
       executar(() => associarItemAoEvento(eventoId, itemId, quantidade), 'Item associado ao evento.'),
     finalizarEvento: (eventoId: string) =>
       executar(() => finalizarEvento(eventoId), 'Evento finalizado e itens devolvidos ao estoque.'),
-    popularDadosExemplo: () => executar(() => popularDadosExemplo(), 'Dados de exemplo carregados.'),
   };
 }
 

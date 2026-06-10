@@ -4,15 +4,15 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Botao } from '@/components/Botao';
 import { colors, radius, spacing } from '@/constants/tema';
-import type { StockFlowController } from '@/hooks/useStockFlow';
 
 type Icone = ComponentProps<typeof Ionicons>['name'];
 
 interface ConfiguracoesScreenProps {
-  controller: StockFlowController;
+  usuarioEmail: string;
+  onSair: () => void;
 }
 
-export function ConfiguracoesScreen({ controller }: ConfiguracoesScreenProps) {
+export function ConfiguracoesScreen({ usuarioEmail, onSair }: ConfiguracoesScreenProps) {
   return (
     <View style={styles.tela}>
       <View style={styles.topoTexto}>
@@ -45,13 +45,11 @@ export function ConfiguracoesScreen({ controller }: ConfiguracoesScreenProps) {
           A primeira versao usa SQLite local para manter itens, eventos, vinculos e historico no aparelho. A
           organizacao por repositorio facilita uma futura migracao para Supabase ou Firebase.
         </Text>
-        <Botao
-          titulo="Carregar dados de exemplo"
-          icone="sparkles-outline"
-          variante="secundario"
-          onPress={controller.popularDadosExemplo}
-          desabilitado={controller.salvando || controller.dados.itens.length > 0}
-        />
+      </CardInfo>
+
+      <CardInfo icone="person-circle-outline" titulo="Sessao">
+        <LinhaInfo label="Usuario conectado" valor={usuarioEmail} />
+        <Botao titulo="Sair" icone="log-out-outline" variante="fantasma" onPress={onSair} />
       </CardInfo>
     </View>
   );

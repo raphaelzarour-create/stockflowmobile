@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Botao } from '@/components/Botao';
@@ -19,6 +19,7 @@ type StatusFiltro = StatusItem | 'todos';
 
 interface EstoqueScreenProps {
   controller: StockFlowController;
+  abrirCadastroToken?: number;
 }
 
 interface ItemFormState {
@@ -39,7 +40,7 @@ const itemFormInicial: ItemFormState = {
   observacao: '',
 };
 
-export function EstoqueScreen({ controller }: EstoqueScreenProps) {
+export function EstoqueScreen({ controller, abrirCadastroToken = 0 }: EstoqueScreenProps) {
   const [busca, setBusca] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<CategoriaFiltro>('todas');
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>('todos');
@@ -63,6 +64,12 @@ export function EstoqueScreen({ controller }: EstoqueScreenProps) {
   }, [busca, categoriaFiltro, controller.dados.itens, statusFiltro]);
 
   const itemMovimento = controller.dados.itens.find((item) => item.id === movimentoItemId);
+
+  useEffect(() => {
+    if (abrirCadastroToken > 0) {
+      abrirNovoItem();
+    }
+  }, [abrirCadastroToken]);
 
   function abrirNovoItem() {
     setForm(itemFormInicial);
@@ -144,15 +151,15 @@ export function EstoqueScreen({ controller }: EstoqueScreenProps) {
     <View style={styles.tela}>
       <View style={styles.topo}>
         <View style={styles.topoTexto}>
-          <Text style={styles.titulo}>Estoque</Text>
-          <Text style={styles.subtitulo}>Cadastre itens e registre entradas, saidas e devolucoes.</Text>
+          <Text style={styles.titulo}>Produtos</Text>
+          <Text style={styles.subtitulo}>Cadastre produtos e equipamentos usados nos eventos.</Text>
         </View>
-        <Botao titulo="Novo" icone="add-outline" onPress={abrirNovoItem} style={styles.botaoNovo} />
+        <Botao titulo="Cadastrar" icone="add-outline" onPress={abrirNovoItem} style={styles.botaoNovo} />
       </View>
 
       <View style={styles.cardBusca}>
         <CampoTexto
-          label="Buscar item"
+          label="Buscar produto"
           value={busca}
           onChangeText={setBusca}
           placeholder="Ex: refletor, cabo, painel"
@@ -181,7 +188,7 @@ export function EstoqueScreen({ controller }: EstoqueScreenProps) {
       {formAberto ? (
         <View style={styles.formCard}>
           <View style={styles.linhaTituloCard}>
-            <Text style={styles.cardTitulo}>{itemEditandoId ? 'Editar item' : 'Novo item'}</Text>
+            <Text style={styles.cardTitulo}>{itemEditandoId ? 'Editar produto' : 'Novo produto'}</Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Fechar formulario de item"
@@ -192,7 +199,7 @@ export function EstoqueScreen({ controller }: EstoqueScreenProps) {
             </Pressable>
           </View>
           <CampoTexto
-            label="Nome do item"
+            label="Nome do produto"
             value={form.nome}
             onChangeText={(nome) => setForm((atual) => ({ ...atual, nome }))}
             placeholder="Ex: Refletor PAR LED"
@@ -205,7 +212,7 @@ export function EstoqueScreen({ controller }: EstoqueScreenProps) {
           />
           <View style={styles.duasColunas}>
             <CampoTexto
-              label="Total"
+              label="Quantidade total"
               value={form.quantidadeTotal}
               onChangeText={(quantidadeTotal) =>
                 setForm((atual) => ({ ...atual, quantidadeTotal: apenasDigitos(quantidadeTotal) }))
@@ -215,7 +222,7 @@ export function EstoqueScreen({ controller }: EstoqueScreenProps) {
               containerStyle={styles.campoFlex}
             />
             <CampoTexto
-              label="Disponivel"
+              label="Disponível"
               value={form.quantidadeDisponivel}
               onChangeText={(quantidadeDisponivel) =>
                 setForm((atual) => ({ ...atual, quantidadeDisponivel: apenasDigitos(quantidadeDisponivel) }))
@@ -235,12 +242,12 @@ export function EstoqueScreen({ controller }: EstoqueScreenProps) {
             label="Observacao"
             value={form.observacao}
             onChangeText={(observacao) => setForm((atual) => ({ ...atual, observacao }))}
-            placeholder="Observacoes rapidas para a equipe"
+            placeholder="Observações rápidas para a equipe"
             multiline
             style={styles.textArea}
           />
           <Botao
-            titulo={itemEditandoId ? 'Salvar alteracoes' : 'Cadastrar item'}
+            titulo={itemEditandoId ? 'Salvar alterações' : 'Cadastrar produto'}
             icone="save-outline"
             onPress={() => void salvarFormulario()}
             desabilitado={controller.salvando}
@@ -294,13 +301,13 @@ export function EstoqueScreen({ controller }: EstoqueScreenProps) {
 
       <View style={styles.lista}>
         <View style={styles.linhaSecao}>
-          <Text style={styles.secaoTitulo}>Itens cadastrados</Text>
+          <Text style={styles.secaoTitulo}>Produtos cadastrados</Text>
           <Text style={styles.contador}>{itensFiltrados.length}</Text>
         </View>
         {itensFiltrados.length === 0 ? (
           <EmptyState
-            titulo="Nenhum item encontrado"
-            descricao="Cadastre um item ou limpe os filtros para visualizar o estoque."
+            titulo="Nenhum produto encontrado"
+            descricao="Cadastre um produto ou limpe os filtros para visualizar o estoque."
             icone="cube-outline"
           />
         ) : (
@@ -344,7 +351,7 @@ function ItemCard({
 
       <View style={styles.disponibilidadeBox}>
         <View style={styles.disponibilidadeLinha}>
-          <Text style={styles.disponibilidadeTexto}>Disponivel</Text>
+          <Text style={styles.disponibilidadeTexto}>Disponível</Text>
           <Text style={styles.disponibilidadeNumero}>
             {item.quantidadeDisponivel}/{item.quantidadeTotal}
           </Text>
