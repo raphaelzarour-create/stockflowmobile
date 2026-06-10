@@ -32,8 +32,7 @@
             "Cross-Origin-Opener-Policy": "same-origin"
           }
         }
-      ],
-      "expo-sqlite"
+      ]
     ],
     "experiments": {
       "typedRoutes": true

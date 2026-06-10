@@ -16,20 +16,21 @@ Essa situação gerava risco de perda de informações, dificuldade para consult
 
 O projeto foi desenvolvido com React Native, Expo e TypeScript, pois essas tecnologias permitem criar um aplicativo mobile multiplataforma com boa produtividade e organização de código.
 
-A persistência local utiliza SQLite, por ser adequada para dados estruturados e relacionados. O sistema mantém tabelas para itens, eventos, itens vinculados a eventos e movimentações de estoque. Essa escolha facilita a consistência dos dados e prepara o projeto para uma futura migração para uma solução em nuvem, como Supabase ou Firebase.
+O login e a persistência utilizam Supabase Auth e Supabase Postgres. Assim, o aplicativo deixa de depender de registros isolados no aparelho e passa a operar com um banco real, compartilhado entre colaboradores autenticados. O banco utiliza Row Level Security para restringir acesso a usuários autenticados e funções SQL para garantir consistência em operações críticas de estoque.
 
 A arquitetura separa responsabilidades:
 
 - Telas em `src/screens`.
 - Componentes reutilizáveis em `src/components`.
 - Regras de negócio em `src/services`.
-- Persistência em `src/storage`.
+- Persistência real em `src/storage`, usando Supabase/Postgres.
 - Tipos de domínio em `src/types`.
 - Controlador da interface em `src/hooks`.
 
 ## Funcionalidades Implementadas
 
 - Visualização de resumo do estoque.
+- Login real por e-mail e senha.
 - Cadastro, edição e exclusão de itens.
 - Registro de entrada, saída, devolução, manutenção e item danificado.
 - Cadastro, edição e exclusão de eventos.
@@ -48,7 +49,7 @@ A arquitetura separa responsabilidades:
 - Apoio ao planejamento logístico de eventos.
 - Registro do histórico de movimentações.
 - Uso prático em celular durante a rotina de trabalho.
-- Baixo custo inicial por utilizar armazenamento local.
+- Banco compartilhado para uso por mais de um colaborador.
 
 ## Critérios de Avaliação do Projeto
 
@@ -56,6 +57,7 @@ A arquitetura separa responsabilidades:
 - Capacidade de cadastrar e localizar itens rapidamente.
 - Atualização correta da disponibilidade após movimentações.
 - Funcionamento do fluxo de criação de evento e reserva de itens.
+- Funcionamento do login real e da gravação dos dados no banco Supabase.
 - Clareza das informações exibidas na dashboard.
 - Feedback visual após ações de salvar, excluir, movimentar ou finalizar evento.
 
@@ -73,8 +75,7 @@ Para comprovar o desenvolvimento e a aplicação extensionista, recomenda-se col
 
 ## Possíveis Melhorias Futuras
 
-- Sincronização com banco em nuvem.
-- Login por perfil de usuário.
+- Perfis de usuário por cargo.
 - Relatórios gerenciais.
 - Scanner de QR Code para equipamentos.
 - Cadastro de fotos dos itens.

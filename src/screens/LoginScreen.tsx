@@ -9,33 +9,26 @@ import { CampoTexto } from '@/components/CampoTexto';
 import { LogoEmpresa } from '@/components/LogoEmpresa';
 import { appConfig } from '@/constants/app';
 import { colors, radius, spacing } from '@/constants/tema';
+import type { AuthController } from '@/hooks/useAuth';
 
 interface LoginScreenProps {
-  onEntrar: (usuario: { nome: string; email: string }) => void;
+  auth: AuthController;
 }
 
-export function LoginScreen({ onEntrar }: LoginScreenProps) {
+type LoginModo = 'entrar' | 'cadastro';
+
+export function LoginScreen({ auth }: LoginScreenProps) {
+  const [modo, setModo] = useState<LoginModo>('entrar');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState('');
 
-  function entrar() {
-    const emailNormalizado = email.trim().toLowerCase();
-    if (!emailNormalizado || !senha.trim()) {
-      setErro('Informe e-mail e senha para acessar o StockFlow.');
+  async function enviar() {
+    if (modo === 'cadastro') {
+      await auth.cadastrar(email, senha);
       return;
     }
 
-    if (!emailNormalizado.includes('@')) {
-      setErro('Informe um e-mail valido.');
-      return;
-    }
-
-    setErro('');
-    onEntrar({
-      nome: emailNormalizado.split('@')[0],
-      email: emailNormalizado,
-    });
+    await auth.entrar(email, senha);
   }
 
   return (
@@ -59,14 +52,28 @@ export function LoginScreen({ onEntrar }: LoginScreenProps) {
                 <Ionicons name="lock-closed-outline" size={20} color={colors.primary} />
               </View>
               <View style={styles.flex}>
-                <Text style={styles.titulo}>Entrar no aplicativo</Text>
-                <Text style={styles.subtitulo}>Acesso local para colaboradores da empresa.</Text>
+                <Text style={styles.titulo}>{modo === 'entrar' ? 'Entrar no aplicativo' : 'Criar acesso'}</Text>
+                <Text style={styles.subtitulo}>Autenticacao real com Supabase Auth.</Text>
               </View>
             </View>
 
-            {erro ? (
+            {!auth.configurado ? (
               <View style={styles.erroBox}>
-                <Text style={styles.erroTexto}>{erro}</Text>
+                <Text style={styles.erroTexto}>
+                  Banco real nao configurado. Crie o .env com a URL e a chave publica do Supabase.
+                </Text>
+              </View>
+            ) : null}
+
+            {auth.erro ? (
+              <View style={styles.erroBox}>
+                <Text style={styles.erroTexto}>{auth.erro}</Text>
+              </View>
+            ) : null}
+
+            {auth.sucesso ? (
+              <View style={styles.sucessoBox}>
+                <Text style={styles.sucessoTexto}>{auth.sucesso}</Text>
               </View>
             ) : null}
 
@@ -88,11 +95,28 @@ export function LoginScreen({ onEntrar }: LoginScreenProps) {
               secureTextEntry
               textContentType="password"
             />
-            <Botao titulo="Entrar" icone="log-in-outline" onPress={entrar} />
+            <Botao
+              titulo={modo === 'entrar' ? 'Entrar' : 'Criar conta'}
+              icone={modo === 'entrar' ? 'log-in-outline' : 'person-add-outline'}
+              onPress={() => void enviar()}
+              desabilitado={auth.salvando || !auth.configurado}
+            />
+            {appConfig.cadastroHabilitado ? (
+              <Botao
+                titulo={modo === 'entrar' ? 'Criar uma conta' : 'Ja tenho conta'}
+                icone={modo === 'entrar' ? 'person-add-outline' : 'arrow-back-outline'}
+                variante="fantasma"
+                onPress={() => {
+                  auth.limparMensagens();
+                  setModo((atual) => (atual === 'entrar' ? 'cadastro' : 'entrar'));
+                }}
+                desabilitado={auth.salvando || !auth.configurado}
+              />
+            ) : null}
           </View>
 
           <Text style={styles.aviso}>
-            Use o login da equipe para abrir o app. A sincronizacao em nuvem pode ser conectada futuramente.
+            Use o login da equipe para acessar o banco compartilhado da empresa.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -166,6 +190,18 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   erroTexto: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sucessoBox: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    backgroundColor: '#DCFCE7',
+    padding: spacing.md,
+  },
+  sucessoTexto: {
     color: colors.text,
     fontSize: 13,
     fontWeight: '700',

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { calcularResumoEstoque } from '@/services/regrasEstoque';
 import {
+  assinarMudancasEstoque,
   associarItemAoEvento,
   carregarDados,
   excluirEvento,
@@ -47,6 +48,16 @@ export function useStockFlow() {
 
   useEffect(() => {
     void recarregar();
+  }, [recarregar]);
+
+  useEffect(() => {
+    try {
+      return assinarMudancasEstoque(() => {
+        void recarregar();
+      });
+    } catch {
+      return undefined;
+    }
   }, [recarregar]);
 
   const executar = useCallback(

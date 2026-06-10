@@ -6,8 +6,10 @@ Use este roteiro em um celular Android ou Expo Go antes da apresentação.
 
 - [ ] Abrir o app no celular.
 - [ ] Conferir se a tela inicial carrega sem erro.
-- [ ] Fazer login com e-mail e senha de teste.
+- [ ] Fazer login com e-mail e senha cadastrados no Supabase.
+- [ ] Fechar e abrir o app novamente para confirmar que a sessão continua ativa.
 - [ ] Cadastrar um produto real, se o estoque estiver vazio.
+- [ ] Conferir no Supabase se o produto foi gravado na tabela `itens`.
 - [ ] Confirmar se a barra inferior navega entre Início, Estoque, Eventos, Histórico e Info.
 
 ## Estoque

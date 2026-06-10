@@ -25,7 +25,9 @@ A empresa realiza eventos com materiais de iluminação, painéis de LED, cabos,
 - React 19
 - TypeScript
 - Expo Router
-- Expo SQLite
+- Supabase Auth
+- Supabase Postgres com Row Level Security
+- AsyncStorage para persistir a sessão no celular
 - Jest com jest-expo
 
 ## Como Instalar
@@ -33,6 +35,30 @@ A empresa realiza eventos com materiais de iluminação, painéis de LED, cabos,
 ```bash
 npm install
 ```
+
+## Configurar Banco Real
+
+O app usa Supabase para login real e banco compartilhado. Antes de rodar em celular:
+
+1. Crie um projeto no Supabase.
+2. Abra o SQL Editor do Supabase.
+3. Rode o script [docs/supabase-schema.sql](docs/supabase-schema.sql).
+4. Copie `.env.example` para `.env`.
+5. Preencha `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+
+Exemplo:
+
+```env
+EXPO_PUBLIC_APP_NAME=StockFlow
+EXPO_PUBLIC_COMPANY_NAME=4K Leds e Eventos
+EXPO_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sua-chave-publica
+EXPO_PUBLIC_ENABLE_SIGNUP=true
+```
+
+Use apenas a chave publica/publishable no app. Nunca coloque service role key no `.env` do Expo.
+
+Para uso interno real, mantenha o cadastro público do Supabase controlado. Se a empresa quiser criar usuários manualmente pelo painel do Supabase, defina `EXPO_PUBLIC_ENABLE_SIGNUP=false`.
 
 ## Como Rodar
 
@@ -74,7 +100,7 @@ npm run typecheck
 npm test
 ```
 
-O projeto usa Expo SDK 56, Expo Router, Expo SQLite, React Native e TypeScript.
+O projeto usa Expo SDK 56, Expo Router, Supabase Auth/Postgres, React Native e TypeScript.
 
 ### 2. Instalar Android Studio no Windows
 
@@ -233,7 +259,7 @@ src/
   navigation/       Definição das abas principais
   screens/          Telas mobile-first
   services/         Regras de negócio
-  storage/          SQLite e repositório local
+  storage/          Repositório remoto Supabase/Postgres
   tests/            Testes automatizados
   types/            Tipos de domínio
   utils/            Formatadores e utilitários
@@ -241,15 +267,16 @@ src/
 
 ## Decisões Técnicas
 
-SQLite foi escolhido para a primeira versão porque os dados possuem relacionamento claro entre itens, eventos, vínculos e movimentações. Isso evita estruturas soltas em armazenamento chave-valor e facilita uma futura migração para Supabase ou Firebase.
+Supabase foi escolhido para esta versão porque entrega autenticação real, Postgres, Row Level Security e API segura para o aplicativo mobile. Os dados deixam de ficar presos ao aparelho e passam a ser compartilhados entre colaboradores autenticados.
+
+As operações críticas de estoque ficam em funções SQL no arquivo `docs/supabase-schema.sql`. Assim, reservar item para evento, movimentar estoque e finalizar evento rodam de forma atômica no banco, reduzindo risco de inconsistência quando mais de uma pessoa usa o app.
 
 A lógica de negócio fica em `src/services`, a persistência em `src/storage` e as telas usam o hook `useStockFlow`. Assim, a interface não mistura regras de estoque diretamente nos componentes visuais.
 
 ## Próximas Melhorias
 
-- Autenticação por perfil de usuário.
-- Sincronização em nuvem com Supabase ou Firebase.
+- Perfis de acesso por cargo.
 - Exportação de relatórios em PDF.
 - Scanner de QR Code para identificar equipamentos.
 - Fotos dos itens.
-- Permissões por cargo.
+- Auditoria detalhada por usuário.

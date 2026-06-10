@@ -40,10 +40,10 @@ export function ConfiguracoesScreen({ usuarioEmail, onSair }: ConfiguracoesScree
         <ChecklistItem texto="Fluxos principais funcionando apenas por toque." />
       </CardInfo>
 
-      <CardInfo icone="server-outline" titulo="Dados locais">
+      <CardInfo icone="server-outline" titulo="Banco de dados real">
         <Text style={styles.textoLongo}>
-          A primeira versao usa SQLite local para manter itens, eventos, vinculos e historico no aparelho. A
-          organizacao por repositorio facilita uma futura migracao para Supabase ou Firebase.
+          Esta versao usa Supabase Auth e Postgres para manter itens, eventos, vinculos e historico em um banco
+          compartilhado. As regras de acesso ficam protegidas por Row Level Security.
         </Text>
       </CardInfo>
 

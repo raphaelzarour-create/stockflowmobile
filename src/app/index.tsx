@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LogoEmpresa } from '@/components/LogoEmpresa';
 import { appConfig } from '@/constants/app';
 import { colors, radius, spacing } from '@/constants/tema';
+import { useAuth, type AuthController } from '@/hooks/useAuth';
 import { useStockFlow } from '@/hooks/useStockFlow';
 import { abasPrincipais, type AbaId } from '@/navigation/abas';
 import { ConfiguracoesScreen } from '@/screens/ConfiguracoesScreen';
@@ -17,14 +18,32 @@ import { HistoricoScreen } from '@/screens/HistoricoScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
 
 export default function Home() {
+  const auth = useAuth();
+
+  if (auth.carregando) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="light" />
+        <View style={styles.authLoading}>
+          <LogoEmpresa />
+          <ActivityIndicator color={colors.white} size="large" />
+          <Text style={styles.loadingTextClaro}>Validando sessao...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!auth.session) {
+    return <LoginScreen auth={auth} />;
+  }
+
+  return <StockFlowApp auth={auth} />;
+}
+
+function StockFlowApp({ auth }: { auth: AuthController }) {
   const controller = useStockFlow();
   const [abaAtual, setAbaAtual] = useState<AbaId>('inicio');
-  const [usuario, setUsuario] = useState<{ nome: string; email: string } | null>(null);
   const [abrirCadastroProdutoToken, setAbrirCadastroProdutoToken] = useState(0);
-
-  if (!usuario) {
-    return <LoginScreen onEntrar={setUsuario} />;
-  }
 
   const Conteudo = {
     inicio: (
@@ -41,10 +60,10 @@ export default function Home() {
     historico: <HistoricoScreen controller={controller} />,
     configuracoes: (
       <ConfiguracoesScreen
-        usuarioEmail={usuario.email}
+        usuarioEmail={auth.usuario?.email ?? 'Usuario autenticado'}
         onSair={() => {
-          setUsuario(null);
           setAbaAtual('inicio');
+          void auth.sair();
         }}
       />
     ),
@@ -75,7 +94,7 @@ export default function Home() {
       {controller.carregando && controller.dados.itens.length === 0 && controller.dados.eventos.length === 0 ? (
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.loadingText}>Carregando dados locais...</Text>
+          <Text style={styles.loadingText}>Carregando banco compartilhado...</Text>
         </View>
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -176,9 +195,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
   },
+  authLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+    backgroundColor: colors.primary,
+    padding: spacing.lg,
+  },
   loadingText: {
     color: colors.textMuted,
     fontWeight: '700',
+  },
+  loadingTextClaro: {
+    color: colors.white,
+    fontWeight: '800',
   },
   messageError: {
     margin: spacing.md,

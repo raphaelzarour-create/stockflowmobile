@@ -1,8 +1,5 @@
-import { getDatabase, inicializarBanco } from '@/storage/database';
+import { getSupabaseClient } from '@/lib/supabase';
 import {
-  aplicarAssociacaoEvento,
-  aplicarDevolucaoEvento,
-  aplicarMovimentacaoEstoque,
   validarEvento,
   validarItemEstoque,
   validarQuantidade,
@@ -20,7 +17,6 @@ import type {
   StockFlowData,
   TipoMovimentacao,
 } from '@/types/dominio';
-import { gerarId } from '@/utils/id';
 
 interface ItemRow {
   id: string;
@@ -29,7 +25,7 @@ interface ItemRow {
   quantidade_total: number;
   quantidade_disponivel: number;
   status: StatusItem;
-  observacao: string;
+  observacao: string | null;
   data_cadastro: string;
   atualizado_em: string;
 }
@@ -40,7 +36,7 @@ interface EventoRow {
   cliente: string;
   data: string;
   local: string;
-  descricao: string;
+  descricao: string | null;
   status: StatusEvento;
   criado_em: string;
   atualizado_em: string;
@@ -52,7 +48,7 @@ interface ItemEventoRow {
   item_id: string;
   item_nome: string;
   quantidade: number;
-  devolvido: number;
+  devolvido: boolean;
   data_vinculo: string;
 }
 
@@ -61,10 +57,10 @@ interface MovimentacaoRow {
   item_id: string | null;
   item_nome: string;
   evento_id: string | null;
-  evento_nome: string;
+  evento_nome: string | null;
   tipo: TipoMovimentacao;
   quantidade: number;
-  observacao: string;
+  observacao: string | null;
   data: string;
 }
 
@@ -76,7 +72,7 @@ function mapItem(row: ItemRow): ItemEstoque {
     quantidadeTotal: row.quantidade_total,
     quantidadeDisponivel: row.quantidade_disponivel,
     status: row.status,
-    observacao: row.observacao,
+    observacao: row.observacao ?? '',
     dataCadastro: row.data_cadastro,
     atualizadoEm: row.atualizado_em,
   };
@@ -89,7 +85,7 @@ function mapEvento(row: EventoRow): Evento {
     cliente: row.cliente,
     data: row.data,
     local: row.local,
-    descricao: row.descricao,
+    descricao: row.descricao ?? '',
     status: row.status,
     criadoEm: row.criado_em,
     atualizadoEm: row.atualizado_em,
@@ -103,7 +99,7 @@ function mapItemEvento(row: ItemEventoRow): ItemEvento {
     itemId: row.item_id,
     itemNome: row.item_nome,
     quantidade: row.quantidade,
-    devolvido: row.devolvido === 1,
+    devolvido: row.devolvido,
     dataVinculo: row.data_vinculo,
   };
 }
@@ -114,102 +110,34 @@ function mapMovimentacao(row: MovimentacaoRow): MovimentacaoEstoque {
     itemId: row.item_id,
     itemNome: row.item_nome,
     eventoId: row.evento_id,
-    eventoNome: row.evento_nome,
+    eventoNome: row.evento_nome ?? '',
     tipo: row.tipo,
     quantidade: row.quantidade,
-    observacao: row.observacao,
+    observacao: row.observacao ?? '',
     data: row.data,
   };
 }
 
-async function buscarItemObrigatorio(id: string) {
-  const db = await getDatabase();
-  const row = await db.getFirstAsync<ItemRow>('SELECT * FROM itens WHERE id = ?', id);
-
-  if (!row) {
-    throw new Error('Item nao encontrado.');
-  }
-
-  return mapItem(row);
-}
-
-async function buscarEventoObrigatorio(id: string) {
-  const db = await getDatabase();
-  const row = await db.getFirstAsync<EventoRow>('SELECT * FROM eventos WHERE id = ?', id);
-
-  if (!row) {
-    throw new Error('Evento nao encontrado.');
-  }
-
-  return mapEvento(row);
-}
-
-async function atualizarItem(item: ItemEstoque) {
-  const db = await getDatabase();
-
-  await db.runAsync(
-    `UPDATE itens
-       SET nome = ?, categoria = ?, quantidade_total = ?, quantidade_disponivel = ?,
-           status = ?, observacao = ?, atualizado_em = ?
-     WHERE id = ?`,
-    item.nome,
-    item.categoria,
-    item.quantidadeTotal,
-    item.quantidadeDisponivel,
-    item.status,
-    item.observacao,
-    item.atualizadoEm,
-    item.id,
-  );
-}
-
-async function registrarMovimentacao(params: {
-  item: ItemEstoque;
-  evento?: Evento | null;
-  tipo: TipoMovimentacao;
-  quantidade: number;
-  observacao: string;
-}) {
-  const db = await getDatabase();
-  const agora = new Date().toISOString();
-
-  await db.runAsync(
-    `INSERT INTO movimentacoes
-      (id, item_id, item_nome, evento_id, evento_nome, tipo, quantidade, observacao, data)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    gerarId('mov'),
-    params.item.id,
-    params.item.nome,
-    params.evento?.id ?? null,
-    params.evento?.nome ?? '',
-    params.tipo,
-    params.quantidade,
-    params.observacao,
-    agora,
-  );
-}
-
 export async function carregarDados(): Promise<StockFlowData> {
-  await inicializarBanco();
-  const db = await getDatabase();
+  const client = getSupabaseClient();
 
-  const itensRows = await db.getAllAsync<ItemRow>('SELECT * FROM itens ORDER BY nome COLLATE NOCASE ASC');
-  const eventosRows = await db.getAllAsync<EventoRow>('SELECT * FROM eventos ORDER BY data ASC, nome ASC');
-  const itensEventoRows = await db.getAllAsync<ItemEventoRow>(`
-    SELECT itens_evento.*, itens.nome AS item_nome
-      FROM itens_evento
-      JOIN itens ON itens.id = itens_evento.item_id
-     ORDER BY itens_evento.data_vinculo DESC
-  `);
-  const movimentacoesRows = await db.getAllAsync<MovimentacaoRow>(
-    'SELECT * FROM movimentacoes ORDER BY data DESC LIMIT 100',
-  );
+  const [itens, eventos, itensEvento, movimentacoes] = await Promise.all([
+    client.from('itens').select('*').order('nome', { ascending: true }),
+    client.from('eventos').select('*').order('data', { ascending: true }).order('nome', { ascending: true }),
+    client.from('itens_evento').select('*').order('data_vinculo', { ascending: false }),
+    client.from('movimentacoes').select('*').order('data', { ascending: false }).limit(100),
+  ]);
+
+  garantirSucesso(itens.error);
+  garantirSucesso(eventos.error);
+  garantirSucesso(itensEvento.error);
+  garantirSucesso(movimentacoes.error);
 
   return {
-    itens: itensRows.map(mapItem),
-    eventos: eventosRows.map(mapEvento),
-    itensEvento: itensEventoRows.map(mapItemEvento),
-    movimentacoes: movimentacoesRows.map(mapMovimentacao),
+    itens: ((itens.data ?? []) as ItemRow[]).map(mapItem),
+    eventos: ((eventos.data ?? []) as EventoRow[]).map(mapEvento),
+    itensEvento: ((itensEvento.data ?? []) as ItemEventoRow[]).map(mapItemEvento),
+    movimentacoes: ((movimentacoes.data ?? []) as MovimentacaoRow[]).map(mapMovimentacao),
   };
 }
 
@@ -219,42 +147,28 @@ export async function salvarItem(input: ItemEstoqueInput, id?: string) {
     throw new Error(erros[0]);
   }
 
-  await inicializarBanco();
-  const db = await getDatabase();
-  const agora = new Date().toISOString();
+  const client = getSupabaseClient();
+  const row = {
+    nome: input.nome.trim(),
+    categoria: input.categoria,
+    quantidade_total: input.quantidadeTotal,
+    quantidade_disponivel: input.quantidadeDisponivel,
+    status: input.status,
+    observacao: input.observacao.trim(),
+    atualizado_em: new Date().toISOString(),
+  };
 
-  if (id) {
-    const itemAtual = await buscarItemObrigatorio(id);
-    const itemAtualizado: ItemEstoque = {
-      ...itemAtual,
-      ...input,
-      atualizadoEm: agora,
-    };
+  const { error } = id
+    ? await client.from('itens').update(row).eq('id', id)
+    : await client.from('itens').insert(row);
 
-    await atualizarItem(itemAtualizado);
-    return;
-  }
-
-  await db.runAsync(
-    `INSERT INTO itens
-      (id, nome, categoria, quantidade_total, quantidade_disponivel, status, observacao, data_cadastro, atualizado_em)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    gerarId('item'),
-    input.nome.trim(),
-    input.categoria,
-    input.quantidadeTotal,
-    input.quantidadeDisponivel,
-    input.status,
-    input.observacao.trim(),
-    agora,
-    agora,
-  );
+  garantirSucesso(error);
 }
 
 export async function excluirItem(id: string) {
-  await inicializarBanco();
-  const db = await getDatabase();
-  await db.runAsync('DELETE FROM itens WHERE id = ?', id);
+  const client = getSupabaseClient();
+  const { error } = await client.from('itens').delete().eq('id', id);
+  garantirSucesso(error);
 }
 
 export async function registrarMovimentacaoManual(
@@ -263,20 +177,15 @@ export async function registrarMovimentacaoManual(
   quantidade: number,
   observacao: string,
 ) {
-  await inicializarBanco();
-  const db = await getDatabase();
-
-  await db.withTransactionAsync(async () => {
-    const item = await buscarItemObrigatorio(itemId);
-    const itemAtualizado = aplicarMovimentacaoEstoque(item, tipo, quantidade);
-    await atualizarItem(itemAtualizado);
-    await registrarMovimentacao({
-      item,
-      tipo,
-      quantidade,
-      observacao: observacao.trim() || 'Movimentacao manual de estoque',
-    });
+  validarQuantidade(quantidade);
+  const client = getSupabaseClient();
+  const { error } = await client.rpc('stockflow_registrar_movimentacao_manual', {
+    p_item_id: itemId,
+    p_tipo: tipo,
+    p_quantidade: quantidade,
+    p_observacao: observacao.trim(),
   });
+  garantirSucesso(error);
 }
 
 export async function salvarEvento(input: EventoInput, id?: string) {
@@ -285,126 +194,78 @@ export async function salvarEvento(input: EventoInput, id?: string) {
     throw new Error(erros[0]);
   }
 
-  await inicializarBanco();
-  const db = await getDatabase();
-  const agora = new Date().toISOString();
+  const client = getSupabaseClient();
+  const row = {
+    nome: input.nome.trim(),
+    cliente: input.cliente.trim(),
+    data: input.data,
+    local: input.local.trim(),
+    descricao: input.descricao.trim(),
+    status: input.status,
+    atualizado_em: new Date().toISOString(),
+  };
 
-  if (id) {
-    await buscarEventoObrigatorio(id);
-    await db.runAsync(
-      `UPDATE eventos
-         SET nome = ?, cliente = ?, data = ?, local = ?, descricao = ?, status = ?, atualizado_em = ?
-       WHERE id = ?`,
-      input.nome.trim(),
-      input.cliente.trim(),
-      input.data,
-      input.local.trim(),
-      input.descricao.trim(),
-      input.status,
-      agora,
-      id,
-    );
-    return;
-  }
+  const { error } = id
+    ? await client.from('eventos').update(row).eq('id', id)
+    : await client.from('eventos').insert(row);
 
-  await db.runAsync(
-    `INSERT INTO eventos
-      (id, nome, cliente, data, local, descricao, status, criado_em, atualizado_em)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    gerarId('evt'),
-    input.nome.trim(),
-    input.cliente.trim(),
-    input.data,
-    input.local.trim(),
-    input.descricao.trim(),
-    input.status,
-    agora,
-    agora,
-  );
+  garantirSucesso(error);
 }
 
 export async function excluirEvento(id: string) {
-  await inicializarBanco();
-  const db = await getDatabase();
-
-  await db.withTransactionAsync(async () => {
-    await devolverItensPendentesDoEvento(id);
-    await db.runAsync('DELETE FROM eventos WHERE id = ?', id);
+  const client = getSupabaseClient();
+  const { error } = await client.rpc('stockflow_excluir_evento', {
+    p_evento_id: id,
   });
+  garantirSucesso(error);
 }
 
 export async function associarItemAoEvento(eventoId: string, itemId: string, quantidade: number) {
   validarQuantidade(quantidade);
-  await inicializarBanco();
-  const db = await getDatabase();
-
-  await db.withTransactionAsync(async () => {
-    const evento = await buscarEventoObrigatorio(eventoId);
-    if (evento.status === 'concluido' || evento.status === 'cancelado') {
-      throw new Error('Nao e possivel associar itens a eventos finalizados ou cancelados.');
-    }
-
-    const item = await buscarItemObrigatorio(itemId);
-    const itemAtualizado = aplicarAssociacaoEvento(item, quantidade);
-
-    await atualizarItem(itemAtualizado);
-    await db.runAsync(
-      `INSERT INTO itens_evento
-        (id, evento_id, item_id, quantidade, devolvido, data_vinculo)
-       VALUES (?, ?, ?, ?, 0, ?)`,
-      gerarId('iev'),
-      evento.id,
-      item.id,
-      quantidade,
-      new Date().toISOString(),
-    );
-    await registrarMovimentacao({
-      item,
-      evento,
-      tipo: 'saida',
-      quantidade,
-      observacao: `Saida vinculada ao evento ${evento.nome}`,
-    });
+  const client = getSupabaseClient();
+  const { error } = await client.rpc('stockflow_associar_item_evento', {
+    p_evento_id: eventoId,
+    p_item_id: itemId,
+    p_quantidade: quantidade,
   });
-}
-
-async function devolverItensPendentesDoEvento(eventoId: string) {
-  const db = await getDatabase();
-  const evento = await buscarEventoObrigatorio(eventoId);
-  const vinculos = await db.getAllAsync<ItemEventoRow>(
-    `SELECT itens_evento.*, itens.nome AS item_nome
-       FROM itens_evento
-       JOIN itens ON itens.id = itens_evento.item_id
-      WHERE evento_id = ? AND devolvido = 0`,
-    eventoId,
-  );
-
-  for (const vinculo of vinculos) {
-    const item = await buscarItemObrigatorio(vinculo.item_id);
-    const itemAtualizado = aplicarDevolucaoEvento(item, vinculo.quantidade);
-    await atualizarItem(itemAtualizado);
-    await db.runAsync('UPDATE itens_evento SET devolvido = 1 WHERE id = ?', vinculo.id);
-    await registrarMovimentacao({
-      item,
-      evento,
-      tipo: 'devolucao',
-      quantidade: vinculo.quantidade,
-      observacao: `Devolucao do evento ${evento.nome}`,
-    });
-  }
+  garantirSucesso(error);
 }
 
 export async function finalizarEvento(eventoId: string) {
-  await inicializarBanco();
-  const db = await getDatabase();
-
-  await db.withTransactionAsync(async () => {
-    await devolverItensPendentesDoEvento(eventoId);
-    await db.runAsync(
-      'UPDATE eventos SET status = ?, atualizado_em = ? WHERE id = ?',
-      'concluido',
-      new Date().toISOString(),
-      eventoId,
-    );
+  const client = getSupabaseClient();
+  const { error } = await client.rpc('stockflow_finalizar_evento', {
+    p_evento_id: eventoId,
   });
+  garantirSucesso(error);
+}
+
+export function assinarMudancasEstoque(onChange: () => void) {
+  const client = getSupabaseClient();
+  const channel = client
+    .channel('stockflow-dados')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'itens' }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'eventos' }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'itens_evento' }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes' }, onChange)
+    .subscribe();
+
+  return () => {
+    void client.removeChannel(channel);
+  };
+}
+
+function garantirSucesso(error: { message: string } | null) {
+  if (!error) {
+    return;
+  }
+
+  throw new Error(traduzirErroBanco(error.message));
+}
+
+function traduzirErroBanco(mensagem: string) {
+  if (mensagem.includes('JWT expired') || mensagem.includes('invalid claim')) {
+    return 'Sessao expirada. Entre novamente.';
+  }
+
+  return mensagem || 'Nao foi possivel acessar o banco de dados.';
 }
