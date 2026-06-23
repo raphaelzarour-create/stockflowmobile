@@ -16,6 +16,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.raphaelzarour.stockflowmobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0B2D4D",
         "foregroundImage": "./assets/android-icon-foreground.png",
